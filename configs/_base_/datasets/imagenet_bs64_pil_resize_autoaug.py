@@ -1,0 +1,74 @@
+# dataset settings
+dataset_type = 'ImageNet'
+data_preprocessor = dict(
+    num_classes=1000,
+    # RGB format normalization parameters
+    mean=[123.675, 116.28, 103.53],
+    std=[58.395, 57.12, 57.375],
+    # convert image from BGR to RGB
+    to_rgb=True,
+)
+
+bgr_mean = data_preprocessor['mean'][::-1]
+bgr_std = data_preprocessor['std'][::-1]
+
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='RandomResizedCrop',
+        scale=224,
+        backend='pillow',
+        interpolation='bicubic'),
+    dict(type='RandomFlip', prob=0.5, direction='horizontal'),
+    dict(
+        type='AutoAugment',
+        policies='imagenet',
+        hparams=dict(
+            pad_val=[round(x) for x in bgr_mean], interpolation='bicubic')),
+    dict(type='PackClsInputs'),
+]
+
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='ResizeEdge',
+        scale=256,
+        edge='short',
+        backend='pillow',
+        interpolation='bicubic'),
+    dict(type='CenterCrop', crop_size=224),
+    dict(type='PackClsInputs'),
+]
+
+train_dataloader = dict(
+    batch_size=128,
+    num_workers=2,
+    dataset=dict(
+        type=dataset_type,
+        #data_root='/data/goujp/data/imagenet/ILSVRC2012_img_train',
+        data_root='/data1/mazc/gjp/ljy/data/imagenet/ILSVRC2012_img_train',
+        #ann_file='/data/goujp/yicheng/data/imagenet/meta/train.txt',
+        ann_file='/data1/mazc/gjp/yc/data/imagenet/meta/train.txt',
+        data_prefix='',
+        pipeline=train_pipeline),
+    sampler=dict(type='DefaultSampler', shuffle=True),
+)
+
+val_dataloader = dict(
+    batch_size=128,
+    num_workers=2,
+    dataset=dict(
+        type=dataset_type,
+        #data_root='/data/goujp/data/imagenet/val',
+        data_root='/data1/mazc/gjp/yc/data/imagenet/ILSVRC2012_img_val',
+        #ann_file='/data/goujp/yicheng/data/imagenet/meta/val.txt',
+        ann_file='/data1/mazc/gjp/yc/data/imagenet/meta/val.txt',
+        data_prefix='',
+        pipeline=test_pipeline),
+    sampler=dict(type='DefaultSampler', shuffle=False),
+)
+val_evaluator = dict(type='Accuracy', topk=(1, 5))
+
+# If you want standard test, please manually configure the test dataset
+test_dataloader = val_dataloader
+test_evaluator = val_evaluator
